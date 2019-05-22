@@ -1,21 +1,65 @@
-// translator.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
+#include "test_runner.h"
+#include <string>
+#include <string_view>
+#include <deque>
 
-#include "pch.h"
-#include <iostream>
 
-int main()
-{
-    std::cout << "Hello World!\n"; 
+using namespace std;
+
+class Translator {
+public:
+	void Add(string_view source, string_view target) {
+		auto s_pointer = SearchOrPushBack(source);
+		auto t_pointer = SearchOrPushBack(target);
+		
+		_forward[s_pointer] = t_pointer;
+		_backward[t_pointer] = s_pointer;
+	}
+	string_view TranslateForward(string_view source) const {
+		return Find(&_forward, source);
+	}
+	string_view TranslateBackward(string_view target) const {
+		return Find(&_backward, target);
+	}
+
+
+private:
+	string_view SearchOrPushBack(string_view str) {
+		for (const auto * m_pointer : { &_forward, &_backward }) {
+			const auto iter = m_pointer->find(str);
+			if (iter != m_pointer->end()) {
+				return iter->first;
+			}
+		}
+		_data.push_back(string(str));
+		return _data[_data.size() - 1];
+	}
+
+	string_view Find(const map<string_view, string_view>* map, string_view item) const {
+		const auto it = map->find(item);
+		if (it == map->end()) {
+			return {};
+		}
+		return it->second;
+	}
+
+	deque<string> _data;
+	map<string_view, string_view> _forward;
+	map<string_view, string_view> _backward;
+};
+
+void TestSimple() {
+	Translator translator;
+	translator.Add(string("okno"), string("window"));
+	translator.Add(string("stol"), string("table"));
+
+	ASSERT_EQUAL(translator.TranslateForward("okno"), "window");
+	ASSERT_EQUAL(translator.TranslateBackward("table"), "stol");
+	ASSERT_EQUAL(translator.TranslateBackward("stol"), "");
 }
 
-// Run program: Ctrl + F5 or Debug > Start Without Debugging menu
-// Debug program: F5 or Debug > Start Debugging menu
-
-// Tips for Getting Started: 
-//   1. Use the Solution Explorer window to add/manage files
-//   2. Use the Team Explorer window to connect to source control
-//   3. Use the Output window to see build output and other messages
-//   4. Use the Error List window to view errors
-//   5. Go to Project > Add New Item to create new code files, or Project > Add Existing Item to add existing code files to the project
-//   6. In the future, to open this project again, go to File > Open > Project and select the .sln file
+int main() {
+	TestRunner tr;
+	RUN_TEST(tr, TestSimple);
+	return 0;
+}
