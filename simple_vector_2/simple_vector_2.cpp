@@ -1,8 +1,7 @@
-#include "simple_vector.h"
+#include "simple_vector_2.h"
 #include "test_runner.h"
 
 #include <algorithm>
-#include <numeric>
 #include <iostream>
 #include <vector>
 #include <string>
@@ -33,27 +32,34 @@ void TestPushBack() {
 	sort(begin(v), end(v));
 
 	const vector<int> expected = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-	ASSERT_EQUAL(v.Size(), expected.size());
 	ASSERT(equal(begin(v), end(v), begin(expected)));
 }
 
-void TestCopyAssignment() {
-	SimpleVector<int> numbers(10);
-	iota(numbers.begin(), numbers.end(), 1);
+class StringNonCopyable : public string {
+public:
+	using string::string;
+	StringNonCopyable(string&& other) : string(move(other)) {}
+	StringNonCopyable(const StringNonCopyable&) = delete;
+	StringNonCopyable(StringNonCopyable&&) = default;
+	StringNonCopyable& operator=(const StringNonCopyable&) = delete;
+	StringNonCopyable& operator=(StringNonCopyable&&) = default;
+};
 
-	SimpleVector<int> dest;
-	ASSERT_EQUAL(dest.Size(), 0u);
-
-	dest = numbers;
-	ASSERT_EQUAL(dest.Size(), numbers.Size());
-	ASSERT(dest.Capacity() >= dest.Size());
-	ASSERT(equal(dest.begin(), dest.end(), numbers.begin()));
+void TestNoCopy() {
+	SimpleVector<StringNonCopyable> strings;
+	static const int SIZE = 10;
+	for (int i = 0; i < SIZE; ++i) {
+		strings.PushBack(StringNonCopyable(to_string(i)));
+	}
+	for (int i = 0; i < SIZE; ++i) {
+		ASSERT_EQUAL(strings[i], to_string(i));
+	}
 }
 
 int main() {
 	TestRunner tr;
 	RUN_TEST(tr, TestConstruction);
 	RUN_TEST(tr, TestPushBack);
-	RUN_TEST(tr, TestCopyAssignment);
+	RUN_TEST(tr, TestNoCopy);
 	return 0;
 }
